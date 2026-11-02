@@ -1,0 +1,87 @@
+@page
+@model SettingsModel
+@{
+    ViewData["Title"] = "Settings";
+    ViewData["Heading"] = "Mail settings";
+    ViewData["Note"] = "Save the account and the note this page sends.";
+    ViewData["SettingsPage"] = true;
+}
+
+@if (!string.IsNullOrWhiteSpace(Model.Banner))
+{
+    <p class="banner @(Model.BannerIsError ? "banner-bad" : "banner-ok")" role="status">@Model.Banner</p>
+}
+
+<form method="post" class="card settings-card">
+    <div asp-validation-summary="ModelOnly" class="banner banner-bad"></div>
+
+    <h2>About you</h2>
+    <p class="lede">These fill the mail page. You can still change the note before a send.</p>
+    <div class="fields">
+        <div>
+            <label asp-for="Input.YourName">Your name</label>
+            <input asp-for="Input.YourName" autocomplete="name" />
+            <span asp-validation-for="Input.YourName" class="field-error"></span>
+        </div>
+        <div>
+            <label asp-for="Input.Role">Role you want</label>
+            <input asp-for="Input.Role" placeholder="ASP.NET developer" />
+            <span asp-validation-for="Input.Role" class="field-error"></span>
+        </div>
+        <div>
+            <label asp-for="Input.Phone">Phone</label>
+            <input asp-for="Input.Phone" autocomplete="tel" />
+        </div>
+        <div>
+            <label asp-for="Input.Link">LinkedIn or portfolio</label>
+            <input asp-for="Input.Link" placeholder="https://" />
+        </div>
+    </div>
+
+    <h2>Mail account</h2>
+    <p class="lede">Gmail needs an app password from Google Account, Security, 2-Step Verification, App passwords. It is saved on this computer only and is not shown again.</p>
+
+    @if (Model.Input.HasPassword)
+    {
+        <p class="account-status">An app password is already saved for @Model.Input.FromEmail.</p>
+    }
+
+    <label asp-for="Input.FromEmail">From email</label>
+    <input asp-for="Input.FromEmail" autocomplete="username" placeholder="you@gmail.com" />
+    <span asp-validation-for="Input.FromEmail" class="field-error"></span>
+
+    <label asp-for="Input.AppPassword">App password</label>
+    <input asp-for="Input.AppPassword" type="password" autocomplete="new-password" placeholder="@(Model.Input.HasPassword ? "Leave blank to keep the saved password" : "")" />
+    <span asp-validation-for="Input.AppPassword" class="field-error"></span>
+
+    <details open>
+        <summary>Mail server</summary>
+        <label asp-for="Input.Host">Host</label>
+        <input asp-for="Input.Host" />
+        <span asp-validation-for="Input.Host" class="field-error"></span>
+        <label asp-for="Input.Port">Port</label>
+        <input asp-for="Input.Port" />
+        <span asp-validation-for="Input.Port" class="field-error"></span>
+    </details>
+
+    <h2>Default message</h2>
+    <label asp-for="Input.Subject">Subject</label>
+    <input asp-for="Input.Subject" />
+    <span asp-validation-for="Input.Subject" class="field-error"></span>
+
+    <label asp-for="Input.Body">Message</label>
+    <textarea asp-for="Input.Body" rows="12"></textarea>
+    <span asp-validation-for="Input.Body" class="field-error"></span>
+    <p class="hint">Placeholders: {{CompanyName}} {{YourName}} {{Role}} {{Phone}} {{Link}} {{Extra}}</p>
+
+    <div class="button-row">
+        <button type="submit" class="button">Save settings</button>
+        <a class="button button-quiet" asp-page="/Index">Back to mail</a>
+    </div>
+</form>
+
+<form method="post" asp-page-handler="Clear" class="card settings-card">
+    <h2>Remove saved settings</h2>
+    <p class="lede">This deletes the saved name, message, email, and app password from this computer.</p>
+    <button type="submit" class="button button-quiet">Clear saved settings</button>
+</form>

@@ -1,0 +1,198 @@
+@page
+@model IndexModel
+@{
+    ViewData["Title"] = "Interested in joining";
+    ViewData["Heading"] = "Tell companies you want to join";
+    ViewData["Note"] = "Load a sheet, check the companies, then send one short note to each.";
+}
+
+@if (!string.IsNullOrWhiteSpace(Model.Banner))
+{
+    <p class="banner @(Model.BannerIsError ? "banner-bad" : "banner-ok")" role="status">@Model.Banner</p>
+}
+
+<section class="grid-two">
+    <form method="post" asp-page-handler="Import" enctype="multipart/form-data" class="card">
+        <h2>1. Load companies</h2>
+        <p class="lede">Use a Google Sheet, or a CSV / Excel file downloaded from Google Sheets. The sheet needs a company column and an email column.</p>
+
+        <label for="SheetFile">Upload sheet</label>
+        <input id="SheetFile" name="SheetFile" type="file" accept=".csv,.txt,.xlsx,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" />
+
+        <label for="SheetUrl">Or paste a Google Sheet link</label>
+        <input id="SheetUrl" name="SheetUrl" type="url" placeholder="https://docs.google.com/spreadsheets/d/..." value="@Model.SheetUrl" />
+        <p class="hint">The sheet must be shared as anyone with the link can view. The page reads the company name and email columns.</p>
+
+        <button type="submit" class="button">Fetch companies</button>
+    </form>
+
+    <aside class="card card-quiet">
+        <h2>Sheet columns</h2>
+        <p class="lede">Put this in the first row. Extra columns are ignored.</p>
+        <table class="sample">
+            <thead>
+                <tr><th>Company Name</th><th>Email</th></tr>
+            </thead>
+            <tbody>
+                <tr><td>Northwind Labs</td><td>hr@northwind.example</td></tr>
+                <tr><td>Contoso</td><td>talent@contoso.example</td></tr>
+            </tbody>
+        </table>
+        <p class="hint">Headers that also work: Company, Organization, Email, HR Email, Mail Id.</p>
+    </aside>
+</section>
+
+@if (Model.ImportNotes.Count > 0)
+{
+    <ul class="notes">
+        @foreach (var note in Model.ImportNotes)
+        {
+            <li>@note</li>
+        }
+    </ul>
+}
+
+<form id="send-form" method="post" asp-page-handler="Send" enctype="multipart/form-data" class="stack">
+    <div asp-validation-summary="ModelOnly" class="banner banner-bad"></div>
+
+    <section class="grid-two">
+        <div class="card">
+            <h2>2. Your note</h2>
+            <p class="lede">Each mail uses the company name from the sheet. You can edit the words before sending.</p>
+
+            <div class="fields">
+                <div>
+                    <label asp-for="Compose.YourName">Your name</label>
+                    <input asp-for="Compose.YourName" autocomplete="name" />
+                    <span asp-validation-for="Compose.YourName" class="field-error"></span>
+                </div>
+                <div>
+                    <label asp-for="Compose.Role">Role you want</label>
+                    <input asp-for="Compose.Role" placeholder="ASP.NET developer" />
+                    <span asp-validation-for="Compose.Role" class="field-error"></span>
+                </div>
+                <div>
+                    <label asp-for="Compose.Phone">Phone</label>
+                    <input asp-for="Compose.Phone" autocomplete="tel" />
+                </div>
+                <div>
+                    <label asp-for="Compose.Link">LinkedIn or portfolio</label>
+                    <input asp-for="Compose.Link" placeholder="https://" />
+                </div>
+            </div>
+
+            <label asp-for="Compose.Extra">Extra line</label>
+            <textarea asp-for="Compose.Extra" rows="3" placeholder="I have 3 years of experience with C# and SQL Server."></textarea>
+
+            <label asp-for="Compose.Subject">Subject</label>
+            <input asp-for="Compose.Subject" />
+            <span asp-validation-for="Compose.Subject" class="field-error"></span>
+
+            <label asp-for="Compose.Body">Message</label>
+            <textarea asp-for="Compose.Body" rows="12"></textarea>
+            <span asp-validation-for="Compose.Body" class="field-error"></span>
+            <p class="hint">Placeholders: {{CompanyName}} {{YourName}} {{Role}} {{Phone}} {{Link}} {{Extra}}</p>
+
+            <h3>Preview</h3>
+            <p id="preview-subject" class="preview-subject"></p>
+            <div id="preview-body" class="preview"></div>
+        </div>
+
+        <div class="card">
+            <h2>3. Your mail account</h2>
+            @if (Model.HasSavedPassword && !string.IsNullOrWhiteSpace(Model.SavedFromEmail))
+            {
+                <p class="lede">Sending as <strong>@Model.SavedFromEmail</strong>. The app password is saved in Settings.</p>
+            }
+            else
+            {
+                <p class="lede">Add your Gmail address and app password in Settings before sending.</p>
+            }
+            <a class="button button-quiet" asp-page="/Settings">Open settings</a>
+
+            <label for="ResumeFile">Resume, optional</label>
+            <input id="ResumeFile" name="ResumeFile" type="file" accept=".pdf,.doc,.docx,application/pdf" />
+            <span asp-validation-for="ResumeFile" class="field-error"></span>
+            <p class="hint">PDF or Word, up to 5 MB. The same file is attached to every selected company.</p>
+        </div>
+    </section>
+
+    <section class="card">
+        <div class="section-head">
+            <div>
+                <h2>4. Companies to contact</h2>
+                <p class="lede">
+                    @if (Model.Contacts.Count == 0)
+                    {
+                        <text>No companies loaded yet.</text>
+                    }
+                    else
+                    {
+                        <text>@Model.Contacts.Count loaded@(string.IsNullOrWhiteSpace(Model.SheetLabel) ? "" : $" from {Model.SheetLabel}"). Up to @Model.SendLimit can be sent at once.</text>
+                    }
+                </p>
+            </div>
+            @if (Model.Contacts.Count > 0)
+            {
+                <button type="submit" class="button button-quiet" asp-page-handler="Clear" formnovalidate>Clear list</button>
+            }
+        </div>
+
+        @if (Model.Contacts.Count == 0)
+        {
+            <p class="empty">Upload a sheet or paste a Google Sheet link above. Company names and emails will show here.</p>
+        }
+        else
+        {
+            <div class="table-wrap">
+                <table class="companies">
+                    <thead>
+                        <tr>
+                            <th><input id="select-all" type="checkbox" checked aria-label="Select all companies" /></th>
+                            <th>Company</th>
+                            <th>Email</th>
+                            <th>Sheet row</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var contact in Model.Contacts)
+                        {
+                            var selected = Model.SelectedRows.Count == 0 || Model.SelectedRows.Contains(contact.RowNumber);
+                            <tr data-company="@contact.CompanyName" data-email="@contact.Email">
+                                <td><input class="pick" type="checkbox" name="SelectedRows" value="@contact.RowNumber" @(selected ? "checked" : null) aria-label="Send to @contact.CompanyName" /></td>
+                                <td>@contact.CompanyName</td>
+                                <td>@contact.Email</td>
+                                <td>@contact.RowNumber</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+
+            <label class="confirm">
+                <input asp-for="Compose.Confirmed" />
+                <span>I want to email the ticked companies and tell them I am interested in joining.</span>
+            </label>
+            <span asp-validation-for="Compose.Confirmed" class="field-error"></span>
+
+            <button id="send-btn" type="submit" class="button">Send interest mail</button>
+        }
+    </section>
+</form>
+
+@if (Model.Outcomes.Count > 0)
+{
+    <section class="card">
+        <h2>Send results</h2>
+        <ul class="results">
+            @foreach (var outcome in Model.Outcomes)
+            {
+                <li class="@(outcome.Success ? "ok" : "bad")">
+                    <strong>@outcome.CompanyName</strong>
+                    <span>@outcome.Email</span>
+                    <span>@outcome.Detail</span>
+                </li>
+            }
+        </ul>
+    </section>
+}

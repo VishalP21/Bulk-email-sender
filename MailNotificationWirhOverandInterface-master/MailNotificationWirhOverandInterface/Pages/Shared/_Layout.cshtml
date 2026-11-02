@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>@ViewData["Title"] - Recruiter mail</title>
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+</head>
+<body>
+    <header class="top">
+        <div class="wrap top-row">
+            <div>
+                <p class="brand">Recruiter mail</p>
+                <h1>@(ViewData["Heading"] ?? "Tell companies you want to join")</h1>
+            </div>
+            <div class="top-side">
+                @if (ViewData["SettingsPage"] as bool? == true)
+                {
+                    <a class="button button-quiet header-button" asp-page="/Index">Back to mail</a>
+                }
+                else
+                {
+                    <a class="button button-quiet header-button" asp-page="/Settings">Settings</a>
+                }
+                <p class="top-note">@(ViewData["Note"] ?? "Load a sheet, check the companies, then send one short note to each.")</p>
+            </div>
+        </div>
+    </header>
+    <main class="wrap">
+        @RenderBody()
+    </main>
+    <script src="~/js/site.js" asp-append-version="true"></script>
+</body>
+</html>
